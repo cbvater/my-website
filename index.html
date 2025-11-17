@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Chuck Vater</title>
+  <style>
+    /* Load the custom font */
+    @font-face {
+      font-family: 'Ade';
+      src: url('fonts/Ade-Display.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("fonts/JetBrainsMono-Light.ttf");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      background-color: #000000;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+    }
+    html, body {
+      height: auto;
+      overflow-y: auto; /*makes it so you can scroll down*/
+    }
+    h1 {
+      font-family: 'Ade', sans-serif;
+      font-size: 3rem;
+      color: #f0f8ff;
+    }
+    p {
+      font-family: "JetBrains Mono", sans-serif;
+      font-size: medium;
+      color: aliceblue;
+    }
+    img {
+      width: 400px;
+      border-radius: 15px;
+    }
+    a{
+      width: 30px;
+      height: auto;
+      margin-top: 10px;
+      display: block;
+    }
+    a img {
+      width: 50px;
+      height: auto;
+      margin-top: 10px;
+      display: block;
+    }
+    pre {
+      background-color: #1e1e1e; /* dark background */
+    color: #dcdcdc;           /* light text */
+    text-align: left;
+    padding: 20px;            /* space inside the box */
+    border-radius: 10px;      /* rounded corners */
+    width: 80%;               /* make it take up most of the page width */
+    margin: 30px auto;        /* center it on the page */
+    font-size: 1rem;          /* make text larger or smaller */
+    font-family: "JetBrains Mono", monospace; /* clean coding font */
+    }
+
+  </style>
+</head>
+<body>
+  <h1>CHUCK VATER</h1>
+  <p>Second year CS student at UW-La Crosse</p>
+  <img src="photos/DSC01032.JPG" alt="RENO">
+  <a href="https://www.linkedin.com/in/charles-vater-33679633b/" target="_blank">
+    <img src="photos/LinkedIn_logo_initials.png"
+         alt="LinkedIn">
+  </a>
+  <pre><code class="language-java">
+
+    def get_gpx_data(file_path):
+    with open(file_path, 'r', encoding='utf-8') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
+    route_info = []
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                route_info.append({
+                    'latitude': point.latitude,
+                    'longitude': point.longitude,
+                })
+    # Add a separator row after this run (latitude and longitude that are invalid)
+    route_info.append({'latitude': -1, 'longitude': -1})
+
+    coordinates_data_df = pd.DataFrame(route_info)
+    coordinates_data_df.to_csv('coordinates_data.csv', mode='a', index=False, header=False)
+    return coordinates_data_df
+
+    def draw_polyline_from_csv(csv_path='coordinates_data.csv'):
+        if not os.path.exists(csv_path):
+          print("CSV file does not exist.")
+          return
+      try:
+
+        df = pd.read_csv(csv_path, header=None, names=['latitude', 'longitude'])
+
+        # Remove any rows with invalid data or NaNs
+        df = df.dropna()
+
+        #convert to floats(ignore errors, will keep separators as -1)
+        df = df.astype({'latitude': float, 'longitude': float})
+
+        #split into multiple runs by detecting separator rows
+        runs = []
+        current_run = []
+
+        for _, row in df.iterrows():
+            lat, lon = row['latitude'], row['longitude']
+
+            if lat == -1 and lon == -1:
+                # End of a run, save if current_run has points
+                if current_run:
+                    runs.append(current_run)
+                    current_run = []
+                else:
+                    current_run.append((lat,lon))
+            else:
+                current_run.append((lat, lon))
+
+        # add last run if any points remain
+        if current_run:
+            runs.append(current_run)
+
+        # draw each run as a separate polyline
+        for coords in runs:
+            if len(coords) > 1: # need at least two points to draw a line
+                folium.PolyLine(coords, weight=2, color="#0E6755").add_to(route_map)
+
+
+        except Exception as e:
+          print(f"Error reading CSV: {e}")
+
+    def update_map():
+      draw_polyline_from_csv()
+      route_map.save('static/mymap.html')
+  </code></pre>
+</body>
+</html>
